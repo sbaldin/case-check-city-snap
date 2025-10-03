@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "gateway-service"
+version = "0.1.0"
+description = "Guide-Architect gateway service (FastAPI)"
+authors = ["Sergey Baldin <fesswoodwork@gmail.com>"]
+readme = "README.md"
+packages = [
+  { include = "citysnap", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.116.2"
+uvicorn = {version = "^0.35.0", extras = ["standard"]}
+pydantic = "^2.9.0"
+python-multipart = "^0.0.20"
+httpx = "^0.27.2"
+pytest = "^8.3"
+pytest-asyncio = "^0.23"
+
+[tool.poetry.scripts]
+api = "citysnap.app.main:run"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

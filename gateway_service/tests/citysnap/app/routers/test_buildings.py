@@ -1,0 +1,70 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from citysnap.app.main import app
+from citysnap.app.schemas import BuildingInfo, Coordinates, CoordinatesAndBuildingId
+from citysnap.app.schemas.building import BuildingId
+from citysnap.app.services import get_building_data_service, get_geocoding_service
+
+
+class FakeGeocodingService:
+    def __init__(self):
+        self.geocode_calls: list[str] = []
+        self.reverse_calls: list[Coordinates] = []
+
+    async def geocode(self, address: str):
+        self.geocode_calls.append(address)
+        return None
+
+    async def reverse_geocode(self, coordinates: Coordinates):
+        self.reverse_calls.append(coordinates)
+        return CoordinatesAndBuildingId(
+            coordinates=coordinates,
+            building_id=BuildingId(osm_id=777),
+        )
+
+
+class FakeBuildingDataService:
+    def __init__(self):
+        self.fetch_calls: list[int] = []
+
+    async def fetch(self, *, building_id: int):
+        self.fetch_calls.append(building_id)
+        return BuildingInfo(name="Test Building")
+
+
+@pytest.fixture
+def client():
+    geocoding_service = FakeGeocodingService()
+    building_service = FakeBuildingDataService()
+
+    app.dependency_overrides[get_geocoding_service] = lambda: geocoding_service
+    app.dependency_overrides[get_building_data_service] = lambda: building_service
+
+    test_client = TestClient(app)
+    yield test_client, geocoding_service, building_service
+
+    app.dependency_overrides.clear()
+
+
+def test_building_info_uses_coordinates_when_present(client):
+    test_client, geocoding_service, building_service = client
+
+    response = test_client.post(
+        "/api/v1/building/info",
+        json={
+            "coordinates": {
+                "lat": 59.935,
+                "lon": 30.325,
+            }
+        },
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+    assert payload["building"]["name"] == "Test Building"
+    assert payload["building"]["location"] == {"lat": 59.935, "lon": 30.325}
+    assert geocoding_service.geocode_calls == []
+    assert len(geocoding_service.reverse_calls) == 1
+    assert building_service.fetch_calls == [777]
