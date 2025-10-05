@@ -22,7 +22,7 @@ async def building_info(
         geocoding_service: GeocodingService = Depends(get_geocoding_service),
         building_data_service: BuildingDataService = Depends(get_building_data_service),
 ) -> BuildingInfoResponse:
-    """Orchestrate downstream agents to construct a building profile."""
+    """Orchestrate downstream requests to construct a building profile."""
     if not payload.address and payload.coordinates is None:
         raise HTTPException(
             status_code=400,

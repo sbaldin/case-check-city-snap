@@ -18,19 +18,18 @@ package-mode = false
 ```
 
 Quick start:
-
 1) Ensure Poetry is installed (see https://python-poetry.org/docs/#installation).
 
-2) From the repo root, change into this service folder:
+2) From the repo root, change into backend service folder:
 
 ```
-cd gateway_service
+cd city-snap-backend
 ```
 
 3) Select the Python you want (for example Python 3.10) and create the in-folder venv:
 
 ```
-poetry env use python3.10
+poetry env use python3
 ```
 
 4) Install dependencies (this will create `.venv/` inside `gateway_service`):
@@ -67,4 +66,18 @@ poetry run uvicorn citysnap.app.main:app --reload --port 8081
 
 ```
 poetry run api
+```
+
+## Curl request examples
+
+### Request building info by address
+
+```shell
+curl -X POST http://localhost:8081/api/v1/building/info -H "Content-Type: application/json" -d '{"address": "Красная Горка, 19 Кемерово"}' 
+```
+
+### Request building info by coordinates
+
+```shell
+curl -X POST http://localhost:8081/api/v1/building/info -H "Content-Type: application/json" -d '{"coordinates": {"lat": "55.3754026", "lon": "86.0725171"}}'
 ```
