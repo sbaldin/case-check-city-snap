@@ -1,0 +1,140 @@
+/* === CitySnap Custom Theme v2 === */
+
+/* Основные цвета бренда (по макету) */
+:root {
+    --cs-primary: #6a5cff;          /* Основной фиолетовый */
+    --cs-primary-light: #9b7bff;    /* Светлый фиолетовый */
+    --cs-accent: #5f3ff6;           /* Дополнительный для hover/active */
+    --cs-bg: #f5f6fb;               /* Светлый фон страницы */
+    --cs-card-bg: #ffffff;          /* Белый фон карточек */
+    --cs-border: #eef0f6;           /* Светлая рамка */
+    --cs-text: #1a1a1a;
+    --cs-muted: #6c757d;
+}
+
+/* Общие стили */
+body {
+    background-color: var(--cs-bg);
+    color: var(--cs-text);
+    font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+}
+
+/* Навигация */
+.navbar-brand {
+    color: var(--cs-primary) !important;
+    font-weight: 700;
+    font-size: 2.1rem;
+    letter-spacing: 0.5px;
+}
+.nav-link {
+    color: #555 !important;
+    transition: color 0.2s ease-in-out;
+}
+.nav-link:hover {
+    color: var(--cs-primary) !important;
+}
+
+/* Кнопки */
+.btn-primary {
+    background: linear-gradient(90deg, var(--cs-primary) 0%, var(--cs-primary-light) 100%);
+    border: none;
+    font-weight: 500;
+    color: #fff;
+}
+.btn-primary:hover {
+    background: linear-gradient(90deg, var(--cs-accent) 0%, var(--cs-primary) 100%);
+    color: #fff;
+    opacity: 0.95;
+}
+
+.btn-outline-secondary {
+    border-color: var(--cs-primary);
+    color: var(--cs-primary);
+    font-weight: 500;
+}
+.btn-outline-secondary:hover {
+    background-color: var(--cs-primary);
+    color: #fff;
+}
+
+/* Карточки */
+.card {
+    border-radius: 1rem;
+    border: 1px solid var(--cs-border);
+    background-color: var(--cs-card-bg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+.card-body {
+    padding: 2rem;
+}
+
+/* Форма поиска */
+form input.form-control {
+    border-radius: 0.6rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--cs-border);
+    transition: border-color 0.2s;
+}
+form input.form-control:focus {
+    border-color: var(--cs-primary);
+    box-shadow: 0 0 0 0.15rem rgba(106, 92, 255, 0.25);
+}
+form button {
+    border-radius: 0.6rem;
+}
+
+/* Блок информации */
+.card-title {
+    font-weight: 600;
+}
+.card-text {
+    color: var(--cs-muted);
+}
+
+/* Специальные карточки (по цветам макета) */
+.border-success-subtle {
+    background-color: #e9fbee !important;
+}
+.border-primary-subtle {
+    background-color: #f1ecff !important;
+}
+.border-warning-subtle {
+    background-color: #fff8e5 !important;
+}
+
+/* Футер */
+footer {
+    border-top: 1px solid var(--cs-border);
+    background-color: #fafbff;
+    color: #444;
+}
+footer h5,
+footer h6 {
+    color: var(--cs-primary);
+    font-weight: 600;
+}
+footer ul li a {
+    color: #555;
+    transition: color 0.2s;
+}
+footer ul li a:hover {
+    text-decoration: underline;
+    color: var(--cs-primary);
+}
+footer .small {
+    color: #888;
+}
+
+/* Медиа-адаптивность */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+    .card-body {
+        padding: 1.5rem;
+    }
+    footer {
+        text-align: center;
+    }
+}
