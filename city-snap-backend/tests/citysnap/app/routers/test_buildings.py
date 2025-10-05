@@ -1,3 +1,6 @@
+import base64
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -67,4 +70,26 @@ def test_building_info_uses_coordinates_when_present(client):
     assert payload["building"]["location"] == {"lat": 59.935, "lon": 30.325}
     assert geocoding_service.geocode_calls == []
     assert len(geocoding_service.reverse_calls) == 1
+    assert building_service.fetch_calls == [777]
+
+
+def test_building_info_saves_base64_image(tmp_path, monkeypatch, client):
+    test_client, geocoding_service, building_service = client
+    monkeypatch.setenv("CITYSNAP_UPLOAD_DIR", str(tmp_path))
+
+    encoded_image = base64.b64encode(b"sample-image").decode("ascii")
+
+    response = test_client.post(
+        "/api/v1/building/info",
+        json={
+            "coordinates": {"lat": 59.935, "lon": 30.325},
+            "image_base64": encoded_image,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    image_path = Path(payload["building"]["image_path"])
+    assert image_path.exists()
+    assert image_path.read_bytes() == b"sample-image"
     assert building_service.fetch_calls == [777]

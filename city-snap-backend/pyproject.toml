@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "gateway-service"
+name = "city-snap-backend"
 version = "0.1.0"
 description = "Guide-Architect gateway service (FastAPI)"
 authors = ["Sergey Baldin <fesswoodwork@gmail.com>"]

@@ -33,6 +33,7 @@ class BuildingInfo(BaseModel):
     architect: Optional[str] = None
     location: Optional[Coordinates] = None
     history: Optional[str] = None
+    image_path: Optional[str] = None
 
 
 class BuildingInfoResponse(BaseModel):

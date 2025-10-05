@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from citysnap.app.services.exceptions import AgentServiceError
+from citysnap.app.services.exceptions import OpenStreetMapServiceError
 from citysnap.app.schemas import Coordinates
 from citysnap.app.services.geocoding import (
     GeocodingService,
@@ -97,7 +97,7 @@ async def test_geocode_raises_agent_service_error_on_http_status(monkeypatch):
 
     service = GeocodingService()
 
-    with pytest.raises(AgentServiceError) as exc_info:
+    with pytest.raises(OpenStreetMapServiceError) as exc_info:
         await service.geocode("Nevsky Prospect 28")
 
     assert exc_info.value.upstream_status == 429
@@ -119,7 +119,7 @@ async def test_geocode_raises_agent_service_error_on_malformed_payload(monkeypat
 
     service = GeocodingService()
 
-    with pytest.raises(AgentServiceError):
+    with pytest.raises(OpenStreetMapServiceError):
         await service.geocode("Nevsky Prospect 28")
 
 
@@ -189,5 +189,5 @@ async def test_reverse_geocode_raises_agent_service_error_on_malformed_coordinat
 
     service = GeocodingService()
 
-    with pytest.raises(AgentServiceError):
+    with pytest.raises(OpenStreetMapServiceError):
         await service.reverse_geocode(Coordinates(lat=59.935, lon=30.325))

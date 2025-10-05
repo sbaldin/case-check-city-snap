@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-class AgentServiceError(RuntimeError):
+class OpenStreetMapServiceError(RuntimeError):
     """Raised when a downstream agent cannot fulfill a request."""
 
     def __init__(self, message: str, *, upstream_status: int | None = None) -> None:

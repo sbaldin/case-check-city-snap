@@ -9,7 +9,7 @@ from typing import Any, Optional
 import httpx
 
 from ..schemas import BuildingInfo, Coordinates
-from .exceptions import AgentServiceError
+from .exceptions import OpenStreetMapServiceError
 
 _DEFAULT_BASE_URL = "https://www.openstreetmap.org/api/0.6"
 _DEFAULT_USER_AGENT = "CitySnapGateway/0.1 (+https://github.com/fesswood)"
@@ -49,15 +49,15 @@ class BuildingDataService:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:  # pragma: no cover - network failure
             status_code = exc.response.status_code if exc.response is not None else None
-            raise AgentServiceError("Building data request rejected", upstream_status=status_code) from exc
+            raise OpenStreetMapServiceError("OpenStreetMap building data API rejected the request", upstream_status=status_code) from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network failure
-            raise AgentServiceError("Failed to call building data service") from exc
+            raise OpenStreetMapServiceError("Failed to call OpenStreetMap building data API") from exc
 
         payload: Any
         try:
             payload = response.json()
         except ValueError as exc:  # pragma: no cover - invalid json
-            raise AgentServiceError("Building data service returned invalid JSON") from exc
+            raise OpenStreetMapServiceError("OpenStreetMap building data API returned invalid JSON") from exc
 
         building = self._extract_building(payload, building_id)
         tags: dict[str, Any] = building.get("tags", {})
@@ -75,11 +75,11 @@ class BuildingDataService:
 
     def _extract_building(self, payload: Any, element_id: int) -> dict[str, Any]:
         if not isinstance(payload, dict):
-            raise AgentServiceError("Building data service returned an unexpected payload")
+            raise OpenStreetMapServiceError("OpenStreetMap building data API returned an unexpected payload")
 
         elements = payload.get("elements")
         if not isinstance(elements, list):
-            raise AgentServiceError("Building data service returned an unexpected payload")
+            raise OpenStreetMapServiceError("OpenStreetMap building data API returned an unexpected payload")
 
         for item in elements:
             if (
@@ -89,7 +89,7 @@ class BuildingDataService:
             ):
                 return item
 
-        raise AgentServiceError("Building not found in building data service response")
+        raise OpenStreetMapServiceError("Building not found in OpenStreetMap building data API response")
 
     def _extract_name(self, tags: dict[str, Any]) -> Optional[str]:
         name = tags.get("name")
@@ -106,7 +106,7 @@ class BuildingDataService:
 
         for candidate in candidates:
             if isinstance(candidate, str):
-                #make sure that year is a number
+                # Make sure that year is a number
                 match = re.search(r"(\d{1,4})", candidate)
                 if match:
                     try:
@@ -127,6 +127,7 @@ class BuildingDataService:
             if isinstance(value, str) and value.strip():
                 return value.strip()
         return None
+
 
 def get_building_data_service() -> BuildingDataService:
     """Factory for FastAPI dependency injection."""

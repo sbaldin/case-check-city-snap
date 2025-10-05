@@ -2,10 +2,10 @@
 
 from .geocoding import GeocodingService, get_geocoding_service
 from .building_data import BuildingDataService, get_building_data_service
-from .exceptions import AgentServiceError
+from .exceptions import OpenStreetMapServiceError
 
 __all__ = [
-    "AgentServiceError",
+    "OpenStreetMapServiceError",
     "BuildingDataService",
     "GeocodingService",
     "get_geocoding_service",

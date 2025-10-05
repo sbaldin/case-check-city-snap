@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 
 from ..schemas import Coordinates, CoordinatesAndBuildingId
-from .exceptions import AgentServiceError
+from .exceptions import OpenStreetMapServiceError
 from ..schemas.building import BuildingId
 
 _DEFAULT_BASE_URL = "https://nominatim.openstreetmap.org/search"
@@ -47,15 +47,15 @@ class GeocodingService:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:  # pragma: no cover - network error path
             status_code = exc.response.status_code if exc.response is not None else None
-            raise AgentServiceError("Geocoding request rejected", upstream_status=status_code) from exc
+            raise OpenStreetMapServiceError("OpenStreetMap Nominatim rejected the request", upstream_status=status_code) from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network error path
-            raise AgentServiceError("Failed to call geocoding service") from exc
+            raise OpenStreetMapServiceError("Failed to call OpenStreetMap Nominatim API") from exc
 
         data: Any
         try:
             data = response.json()
         except ValueError as exc:  # pragma: no cover - response parsing path
-            raise AgentServiceError("Geocoding service returned invalid JSON") from exc
+            raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned invalid JSON") from exc
 
         if not isinstance(data, list) or not data:
             return None
@@ -66,11 +66,11 @@ class GeocodingService:
             longitude = float(building_geo_info["lon"])
             osm_id = int(building_geo_info["osm_id"])
         except (KeyError, TypeError, ValueError) as exc:  # pragma: no cover - defensive guard
-            raise AgentServiceError("Geocoding service returned malformed coordinates") from exc
+            raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned malformed coordinates") from exc
 
         return CoordinatesAndBuildingId(
             coordinates=Coordinates(lat=latitude, lon=longitude),
-            building_id= BuildingId(osm_id=osm_id)
+            building_id=BuildingId(osm_id=osm_id)
         )
 
     async def reverse_geocode(self, coordinates: Coordinates) -> CoordinatesAndBuildingId | None:
@@ -89,15 +89,15 @@ class GeocodingService:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:  # pragma: no cover - network error path
             status_code = exc.response.status_code if exc.response is not None else None
-            raise AgentServiceError("Geocoding request rejected", upstream_status=status_code) from exc
+            raise OpenStreetMapServiceError("OpenStreetMap Nominatim rejected the request", upstream_status=status_code) from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network error path
-            raise AgentServiceError("Failed to call geocoding service") from exc
+            raise OpenStreetMapServiceError("Failed to call OpenStreetMap Nominatim API") from exc
 
         payload: Any
         try:
             payload = response.json()
         except ValueError as exc:  # pragma: no cover - response parsing path
-            raise AgentServiceError("Geocoding service returned invalid JSON") from exc
+            raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned invalid JSON") from exc
 
         if not isinstance(payload, dict):
             return None
@@ -110,7 +110,7 @@ class GeocodingService:
         try:
             osm_id = int(osm_id_raw)
         except (TypeError, ValueError) as exc:
-            raise AgentServiceError("Geocoding service returned malformed coordinates") from exc
+            raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned malformed coordinates") from exc
 
         latitude_raw = payload.get("lat", coordinates.lat)
         longitude_raw = payload.get("lon", coordinates.lon)
@@ -118,7 +118,7 @@ class GeocodingService:
             latitude = float(latitude_raw)
             longitude = float(longitude_raw)
         except (TypeError, ValueError) as exc:
-            raise AgentServiceError("Geocoding service returned malformed coordinates") from exc
+            raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned malformed coordinates") from exc
 
         return CoordinatesAndBuildingId(
             coordinates=Coordinates(lat=latitude, lon=longitude),

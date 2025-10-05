@@ -6,7 +6,7 @@ from citysnap.app.services.building_data import (
     _DEFAULT_BASE_URL,
     _DEFAULT_USER_AGENT,
 )
-from citysnap.app.services.exceptions import AgentServiceError
+from citysnap.app.services.exceptions import OpenStreetMapServiceError
 
 
 class FakeResponse:
@@ -112,7 +112,7 @@ async def test_fetch_raises_error_when_building_not_found(monkeypatch):
 
     service = BuildingDataService()
 
-    with pytest.raises(AgentServiceError):
+    with pytest.raises(OpenStreetMapServiceError):
         await service.fetch(building_id=111)
 
 
@@ -124,7 +124,7 @@ async def test_fetch_raises_error_on_unexpected_payload(monkeypatch):
 
     service = BuildingDataService()
 
-    with pytest.raises(AgentServiceError):
+    with pytest.raises(OpenStreetMapServiceError):
         await service.fetch(building_id=111)
 
 
@@ -139,7 +139,7 @@ async def test_fetch_raises_agent_service_error_on_http_status(monkeypatch):
 
     service = BuildingDataService()
 
-    with pytest.raises(AgentServiceError) as exc_info:
+    with pytest.raises(OpenStreetMapServiceError) as exc_info:
         await service.fetch(building_id=333)
 
     assert exc_info.value.upstream_status == 429
@@ -153,7 +153,7 @@ async def test_fetch_raises_agent_service_error_on_http_error(monkeypatch):
 
     service = BuildingDataService()
 
-    with pytest.raises(AgentServiceError):
+    with pytest.raises(OpenStreetMapServiceError):
         await service.fetch(building_id=444)
 
 
@@ -165,5 +165,5 @@ async def test_fetch_raises_agent_service_error_on_invalid_json(monkeypatch):
 
     service = BuildingDataService()
 
-    with pytest.raises(AgentServiceError):
+    with pytest.raises(OpenStreetMapServiceError):
         await service.fetch(building_id=555)
