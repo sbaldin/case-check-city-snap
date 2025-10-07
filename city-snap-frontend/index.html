@@ -1,66 +1,22 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CitySnap</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css">
-</head>
-<body>
-
-<header class="bg-white shadow-sm">
-    <nav class="container d-flex justify-content-between align-items-center py-3">
-        <h5 class="mb-0 fw-bold navbar-brand">CitySnap</h5>
-        <div>
-            <a href="https://docs.google.com/document/d/1GfL4O149lIRNPgLiRS-NwLaaWsizv5HgNkYWnIEMNQU/edit?pli=1&tab=t.0" target="_blank" class="me-3 text-black text-decoration-none">О сервисе</a>
-        </div>
-    </nav>
-</header>
-
-<main class="container my-5">
-    <!-- Search Card -->
-    <div class="card shadow-sm p-4">
-        <form class="row g-3 align-items-center">
-            <div class="col-lg-9">
-                <input type="text" class="form-control" placeholder="Улица, номер дома, город, почтовый индекс">
-            </div>
-            <div class="col-lg-3 d-flex">
-                <input type="file" class="form-control me-2">
-            </div>
-            <div class="col-12">
-                <button type="submit" class="btn btn-primary w-100">Найти информацию о здании</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Info Section -->
-    <section class="card shadow-sm mt-5 p-5 text-center">
-        <div class="mb-3">
-            <span class="fs-1">🏛️</span>
-        </div>
-        <h4>Информация о здании</h4>
-        <p class="text-muted">Загрузите фотографию и укажите адрес, чтобы получить подробную историческую информацию о здании</p>
-    </section>
-</main>
-
-<footer class="bg-light py-4 mt-5">
-    <div class="container d-flex flex-wrap justify-content-between">
-        <div class="mb-3">
-            <h6>CitySnap</h6>
-            <small class="text-muted">Сервис для получения исторической информации о зданиях по фотографии</small>
-        </div>
-        <div>
-            <h6>Поддержка</h6>
-            <ul class="list-unstyled">
-                <li><a href="https://github.com/sbaldin/case-check-city-snap/blob/main/README.md" class="text-decoration-none">Помощь</a></li>
-                <li><a href="https://github.com/sbaldin" class="text-decoration-none">Контакты</a></li>
-                <li><a href="https://github.com/sbaldin/case-check-city-snap/blob/main/README.md" class="text-decoration-none">Как это работает</a></li>
-            </ul>
-        </div>
-    </div>
-    <div class="text-center mt-3 small text-muted">© 2025 CitySnap. Все права защищены.</div>
-</footer>
-
-</body>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha512-sA+e2PK0g8p1pNvtCFiuQJkz4g8dgy3UUwKdw0lis+kZoKzZ0dHSbd+JdT08vsJoZcJ8FdB0d0n4GMQ0E67nA=="
+      crossorigin=""
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

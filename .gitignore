@@ -170,3 +170,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+
+# city-snap-frontend
+
+city-snap-frontend/node_modules/
+city-snap-frontend/tsconfig.app.tsbuildinfo
+city-snap-frontend/tsconfig.node.tsbuildinfo
