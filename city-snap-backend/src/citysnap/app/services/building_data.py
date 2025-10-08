@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import Any, Optional
@@ -28,6 +29,7 @@ class BuildingDataService:
         self._base_url = base_url or _DEFAULT_BASE_URL
         self._user_agent = user_agent or _DEFAULT_USER_AGENT
         self._timeout = timeout
+        self._logger = logging.getLogger(__name__)
 
     async def fetch(
         self,
@@ -37,6 +39,7 @@ class BuildingDataService:
     ) -> Optional[BuildingInfo]:
         """Return detailed building information using the provided identifiers."""
         if not building_id:
+            self._logger.debug("No building_id provided, skipping building data fetch")
             return None
 
         url = self._build_element_url(building_id)
@@ -44,19 +47,43 @@ class BuildingDataService:
         headers = {"User-Agent": self._user_agent}
 
         try:
+            self._logger.info(
+                "Calling OpenStreetMap building data API url=%s osm_id=%s",
+                url,
+                building_id,
+            )
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.get(url, headers=headers)
             response.raise_for_status()
+            self._logger.info(
+                "OpenStreetMap building data API responded status_code=%s osm_id=%s",
+                response.status_code,
+                building_id,
+            )
         except httpx.HTTPStatusError as exc:  # pragma: no cover - network failure
             status_code = exc.response.status_code if exc.response is not None else None
+            self._logger.exception(
+                "OpenStreetMap building data API rejected the request osm_id=%s status_code=%s",
+                building_id,
+                status_code,
+            )
             raise OpenStreetMapServiceError("OpenStreetMap building data API rejected the request", upstream_status=status_code) from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network failure
+            self._logger.exception(
+                "Failed to call OpenStreetMap building data API osm_id=%s",
+                building_id,
+            )
             raise OpenStreetMapServiceError("Failed to call OpenStreetMap building data API") from exc
 
         payload: Any
         try:
             payload = response.json()
+            self._logger.debug("Parsed building data payload osm_id=%s", building_id)
         except ValueError as exc:  # pragma: no cover - invalid json
+            self._logger.exception(
+                "OpenStreetMap building data API returned invalid JSON osm_id=%s",
+                building_id,
+            )
             raise OpenStreetMapServiceError("OpenStreetMap building data API returned invalid JSON") from exc
 
         building = self._extract_building(payload, building_id)
@@ -71,24 +98,36 @@ class BuildingDataService:
 
     def _build_element_url(self, element_id: int) -> str:
         cleaned_base = self._base_url.rstrip("/")
-        return f"{cleaned_base}/way/{element_id}.json"
+        return f"{cleaned_base}/node/{element_id}.json"
 
     def _extract_building(self, payload: Any, element_id: int) -> dict[str, Any]:
         if not isinstance(payload, dict):
+            self._logger.error(
+                "Unexpected payload type from building data API osm_id=%s payload_type=%s",
+                element_id,
+                type(payload).__name__,
+            )
             raise OpenStreetMapServiceError("OpenStreetMap building data API returned an unexpected payload")
 
         elements = payload.get("elements")
         if not isinstance(elements, list):
+            self._logger.error(
+                "Unexpected elements structure from building data API osm_id=%s payload_keys=%s",
+                element_id,
+                list(payload.keys()),
+            )
             raise OpenStreetMapServiceError("OpenStreetMap building data API returned an unexpected payload")
 
         for item in elements:
             if (
                 isinstance(item, dict)
-                and item.get("type") == "way"
+                and item.get("type") == "way" or item.get("type") == "node"
                 and str(item.get("id")) == str(element_id)
             ):
+                self._logger.debug("Matched building in payload osm_id=%s", element_id)
                 return item
 
+        self._logger.warning("Building not found in payload osm_id=%s", element_id)
         raise OpenStreetMapServiceError("Building not found in OpenStreetMap building data API response")
 
     def _extract_name(self, tags: dict[str, Any]) -> Optional[str]:

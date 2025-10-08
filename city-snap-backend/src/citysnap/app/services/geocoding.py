@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any
 
 import httpx
@@ -35,6 +36,7 @@ class GeocodingService:
         self._timeout = timeout
         self._reverse_url = reverse_url or _DEFAULT_REVERSE_URL
         self._reverse_zoom = reverse_zoom
+        self._logger = logging.getLogger(__name__)
 
     async def geocode(self, address: str) -> CoordinatesAndBuildingId | None:
         """Return coordinates for the provided address or ``None`` if not found."""
@@ -42,22 +44,37 @@ class GeocodingService:
         headers = {"User-Agent": self._user_agent}
 
         try:
+            self._logger.info("Calling OpenStreetMap geocoding url=%s address=%r", self._base_url, address)
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.get(self._base_url, params=params, headers=headers)
             response.raise_for_status()
+            self._logger.info(
+                "Geocoding response received address=%r status_code=%s",
+                address,
+                response.status_code,
+            )
         except httpx.HTTPStatusError as exc:  # pragma: no cover - network error path
             status_code = exc.response.status_code if exc.response is not None else None
+            self._logger.exception(
+                "OpenStreetMap geocoding request rejected address=%r status_code=%s",
+                address,
+                status_code,
+            )
             raise OpenStreetMapServiceError("OpenStreetMap Nominatim rejected the request", upstream_status=status_code) from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network error path
+            self._logger.exception("Failed to call OpenStreetMap geocoding address=%r", address)
             raise OpenStreetMapServiceError("Failed to call OpenStreetMap Nominatim API") from exc
 
         data: Any
         try:
             data = response.json()
+            self._logger.debug("Parsed geocoding payload for address=%r", address)
         except ValueError as exc:  # pragma: no cover - response parsing path
+            self._logger.exception("Geocoding returned invalid JSON address=%r", address)
             raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned invalid JSON") from exc
 
         if not isinstance(data, list) or not data:
+            self._logger.info("No geocoding results for address=%r", address)
             return None
 
         building_geo_info = data[0]
@@ -66,8 +83,16 @@ class GeocodingService:
             longitude = float(building_geo_info["lon"])
             osm_id = int(building_geo_info["osm_id"])
         except (KeyError, TypeError, ValueError) as exc:  # pragma: no cover - defensive guard
+            self._logger.exception("Geocoding returned malformed coordinates address=%r", address)
             raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned malformed coordinates") from exc
 
+        self._logger.info(
+            "Geocoding succeeded address=%r lat=%s lon=%s osm_id=%s",
+            address,
+            latitude,
+            longitude,
+            osm_id,
+        )
         return CoordinatesAndBuildingId(
             coordinates=Coordinates(lat=latitude, lon=longitude),
             building_id=BuildingId(osm_id=osm_id)
@@ -84,32 +109,82 @@ class GeocodingService:
         headers = {"User-Agent": self._user_agent}
 
         try:
+            self._logger.info(
+                "Calling OpenStreetMap reverse geocoding url=%s lat=%s lon=%s",
+                self._reverse_url,
+                coordinates.lat,
+                coordinates.lon,
+            )
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.get(self._reverse_url, params=params, headers=headers)
             response.raise_for_status()
+            self._logger.info(
+                "Reverse geocoding response received lat=%s lon=%s status_code=%s",
+                coordinates.lat,
+                coordinates.lon,
+                response.status_code,
+            )
         except httpx.HTTPStatusError as exc:  # pragma: no cover - network error path
             status_code = exc.response.status_code if exc.response is not None else None
+            self._logger.exception(
+                "OpenStreetMap reverse geocoding request rejected lat=%s lon=%s status_code=%s",
+                coordinates.lat,
+                coordinates.lon,
+                status_code,
+            )
             raise OpenStreetMapServiceError("OpenStreetMap Nominatim rejected the request", upstream_status=status_code) from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network error path
+            self._logger.exception(
+                "Failed to call OpenStreetMap reverse geocoding lat=%s lon=%s",
+                coordinates.lat,
+                coordinates.lon,
+            )
             raise OpenStreetMapServiceError("Failed to call OpenStreetMap Nominatim API") from exc
 
         payload: Any
         try:
             payload = response.json()
+            self._logger.debug(
+                "Parsed reverse geocoding payload lat=%s lon=%s",
+                coordinates.lat,
+                coordinates.lon,
+            )
         except ValueError as exc:  # pragma: no cover - response parsing path
+            self._logger.exception(
+                "Reverse geocoding returned invalid JSON lat=%s lon=%s",
+                coordinates.lat,
+                coordinates.lon,
+            )
             raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned invalid JSON") from exc
 
         if not isinstance(payload, dict):
+            self._logger.info(
+                "Reverse geocoding returned non-dict payload lat=%s lon=%s",
+                coordinates.lat,
+                coordinates.lon,
+            )
             return None
 
         osm_id_raw = payload.get("osm_id")
         osm_type = payload.get("osm_type")
         if osm_id_raw is None or osm_type not in {"way", "W"}:
+            self._logger.info(
+                "Reverse geocoding did not return a building lat=%s lon=%s osm_type=%s",
+                coordinates.lat,
+                coordinates.lon,
+                osm_type,
+            )
             return None
 
         try:
             osm_id = int(osm_id_raw)
         except (TypeError, ValueError) as exc:
+            self._logger.exception(
+                "Reverse geocoding returned malformed osm_id lat=%s lon=%s osm_id_raw=%r",
+                coordinates.lat,
+                coordinates.lon,
+                osm_id_raw,
+            )
             raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned malformed coordinates") from exc
 
         latitude_raw = payload.get("lat", coordinates.lat)
@@ -118,8 +193,23 @@ class GeocodingService:
             latitude = float(latitude_raw)
             longitude = float(longitude_raw)
         except (TypeError, ValueError) as exc:
+            self._logger.exception(
+                "Reverse geocoding returned malformed coordinates lat=%s lon=%s latitude_raw=%r longitude_raw=%r",
+                coordinates.lat,
+                coordinates.lon,
+                latitude_raw,
+                longitude_raw,
+            )
             raise OpenStreetMapServiceError("OpenStreetMap Nominatim returned malformed coordinates") from exc
 
+        self._logger.info(
+            "Reverse geocoding succeeded lat=%s lon=%s resolved_lat=%s resolved_lon=%s osm_id=%s",
+            coordinates.lat,
+            coordinates.lon,
+            latitude,
+            longitude,
+            osm_id,
+        )
         return CoordinatesAndBuildingId(
             coordinates=Coordinates(lat=latitude, lon=longitude),
             building_id=BuildingId(osm_id=osm_id),
