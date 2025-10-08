@@ -6,28 +6,38 @@ import ErrorMessage from '../components/ErrorMessage';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MapPreview from '../components/MapPreview';
 import SearchForm from '../components/SearchForm';
-import { useBuildingQuery } from '../hooks/useBuildingQuery';
+import { buildingService } from '../api/buildingService';
 import type { BuildingInfo, BuildingQueryPayload } from '../types/building';
 
 const SearchPage = () => {
   const navigate = useNavigate();
   const [building, setBuilding] = useState<BuildingInfo | null>(null);
   const [sources, setSources] = useState<string[]>([]);
-  const buildingMutation = useBuildingQuery();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = useCallback(
     async (payload: BuildingQueryPayload) => {
+      setIsLoading(true);
+      setError(null);
       try {
-        const result = await buildingMutation.mutateAsync(payload);
+        const result = await buildingService.searchBuilding(payload);
         setBuilding(result.building ?? null);
         setSources(result.source ?? []);
       } catch (err) {
         console.error('Ошибка получения данных о здании', err);
         setBuilding(null);
         setSources([]);
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Ошибка запроса к backend');
+        }
+      } finally {
+        setIsLoading(false);
       }
     },
-    [buildingMutation],
+    [],
   );
 
   const handleOpenDetails = () => {
@@ -45,13 +55,11 @@ const SearchPage = () => {
 
   return (
     <main className="container my-5">
-      <SearchForm onSubmit={handleSubmit} isLoading={buildingMutation.isPending} />
+      <SearchForm onSubmit={handleSubmit} isLoading={isLoading} />
 
-      {buildingMutation.isPending && <LoadingSpinner />}
+      {isLoading && <LoadingSpinner />}
 
-      {buildingMutation.isError && buildingMutation.error && (
-        <ErrorMessage message={buildingMutation.error.message} />
-      )}
+      {error && <ErrorMessage message={error} />}
 
       <BuildingInfoCard building={building} sources={sources} />
       <MapPreview coordinates={building?.location ?? null} />

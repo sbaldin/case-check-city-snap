@@ -4,8 +4,13 @@ import type {
   Coordinates,
 } from '../types/building';
 
-const DEFAULT_API_BASE_URL = 'http://localhost:8081/api/v1';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL;
+/**
+ * When the React app requests /api/v1/building/info during npm run dev, Vite catches the path, opens a matching request to http://localhost:8081/api/v1/building/info, and
+ * streams the response back, eliminating CORS issues and keeping cookies/headers consistent.
+ * The changeOrigin flag makes the proxied request present localhost:8081 as its origin host, which some backends require when validating host headers.
+ */
+const DEFAULT_API_BASE_URL = '/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
 
 const fileToBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
