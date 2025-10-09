@@ -1,10 +1,14 @@
 """Application entrypoint following FastAPI bigger applications layout."""
 
 import logging
+import os
+from pathlib import Path
 
 from fastapi import FastAPI
-from .routers import buildings, health
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
+from .routers import buildings, health
 
 logging.basicConfig(
     level=logging.INFO,
@@ -12,6 +16,13 @@ logging.basicConfig(
 )
 
 app = FastAPI(title="CitySnap: Guide-Architect Gateway Service", version="0.1.0")
+
+_UPLOAD_DIR_ENV = "CITYSNAP_UPLOAD_DIR"
+_DEFAULT_UPLOAD_DIR = "uploads"
+upload_dir = Path(os.getenv(_UPLOAD_DIR_ENV, _DEFAULT_UPLOAD_DIR)).resolve()
+upload_dir.mkdir(parents=True, exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
 
 app.include_router(health.router)
 app.include_router(buildings.router)

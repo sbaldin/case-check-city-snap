@@ -144,3 +144,13 @@ footer .small {
     width: 100%;
     border-radius: 1rem;
 }
+
+/* Replace U flag to R flag */
+a[href="https://leafletjs.com"]:before {
+    content: "🇷🇺";
+}
+
+/* Replace U flag to R flag */
+svg.leaflet-attribution-flag {
+    display: none !important;
+}

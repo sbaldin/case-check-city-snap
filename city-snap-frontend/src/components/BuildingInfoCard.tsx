@@ -3,9 +3,10 @@ import type { BuildingInfo } from '../types/building';
 interface BuildingInfoCardProps {
   building: BuildingInfo | null;
   sources: string[];
+  fallbackTitle?: string;
 }
 
-const BuildingInfoCard = ({ building, sources }: BuildingInfoCardProps) => {
+const BuildingInfoCard = ({ building, sources, fallbackTitle }: BuildingInfoCardProps) => {
   if (!building) {
     return (
       <section className="card shadow-sm mt-5 p-5 text-center">
@@ -23,6 +24,7 @@ const BuildingInfoCard = ({ building, sources }: BuildingInfoCardProps) => {
   }
 
   const { name, history, architect, year_built: yearBuilt, location, image_path: imagePath } = building;
+  const displayName = name ?? fallbackTitle ?? 'Неизвестный объект';
 
   return (
     <section className="mt-5">
@@ -37,7 +39,7 @@ const BuildingInfoCard = ({ building, sources }: BuildingInfoCardProps) => {
               </div>
             )}
             <div className="card-body">
-              <h5 className="card-title">{name ?? 'Неизвестный объект'}</h5>
+              <h5 className="card-title">{displayName}</h5>
               {history ? <p className="card-text">{history}</p> : <p className="text-muted mb-0">Историческое описание отсутствует</p>}
             </div>
           </div>
@@ -76,14 +78,6 @@ const BuildingInfoCard = ({ building, sources }: BuildingInfoCardProps) => {
             )}
           </div>
         </div>
-      </div>
-      <div className="mt-4 d-flex flex-wrap gap-3 justify-content-between">
-        <button type="button" className="btn btn-outline-secondary" disabled>
-          Поделиться
-        </button>
-        <button type="button" className="btn btn-outline-primary" disabled>
-          Скачать отчёт
-        </button>
       </div>
     </section>
   );

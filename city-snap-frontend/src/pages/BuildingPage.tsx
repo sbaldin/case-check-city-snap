@@ -8,6 +8,7 @@ import type { BuildingInfo } from '../types/building';
 interface LocationState {
   building?: BuildingInfo | null;
   sources?: string[];
+  requestedAddress?: string;
 }
 
 const BuildingPage = () => {
@@ -34,7 +35,11 @@ const BuildingPage = () => {
         </button>
       </div>
 
-      <BuildingInfoCard building={state.building} sources={state.sources ?? []} />
+      <BuildingInfoCard
+        building={state.building}
+        sources={state.sources ?? []}
+        fallbackTitle={state.requestedAddress}
+      />
       <MapPreview coordinates={state.building.location ?? null} />
     </main>
   );

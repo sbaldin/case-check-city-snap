@@ -220,4 +220,4 @@ def _persist_image(
             detail="OpenStreetMap gateway failed to store the uploaded photo",
         ) from exc
 
-    return str(path.resolve())
+    return f"/uploads/{filename}"
