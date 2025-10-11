@@ -1,7 +1,5 @@
 import { NavLink } from 'react-router-dom';
 
-const NAV_ACTIVE_CLASS = 'text-primary fw-semibold';
-
 const Header = () => (
   <header className="bg-white shadow-sm">
     <nav className="container d-flex justify-content-between align-items-center py-3">

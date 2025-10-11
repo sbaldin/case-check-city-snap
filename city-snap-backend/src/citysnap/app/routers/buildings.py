@@ -199,12 +199,12 @@ def _persist_image(
             detail="OpenStreetMap gateway cannot prepare the uploads directory",
         ) from exc
 
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
     parts: list[str] = []
     if building_id is not None:
         parts.append(f"osm-{building_id}")
     if coordinates is not None:
-        parts.append(f"{coordinates.lat:.6f}-{coordinates.lon:.6f}")
+        parts.append(f"{coordinates.lat:.3f}-{coordinates.lon:.3f}")
     if not parts:
         parts.append("osm")
 
