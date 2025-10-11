@@ -10,15 +10,18 @@ from pathlib import Path
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from ..schemas import BuildingInfo, BuildingInfoRequest, BuildingInfoResponse, Coordinates
 from ..services import (
     OpenStreetMapServiceError,
     BuildingDataService,
     GeocodingService,
+    LLMFacade,
+    LLMProviderError,
     get_building_data_service,
     get_geocoding_service,
+    try_get_llm_facade,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["buildings"])
@@ -39,6 +42,8 @@ async def building_info(
     payload: BuildingInfoRequest,
     geocoding_service: GeocodingService = Depends(get_geocoding_service),
     building_data_service: BuildingDataService = Depends(get_building_data_service),
+    llm_facade: LLMFacade | None = Depends(try_get_llm_facade),
+    llm_provider: str | None = Header(default=None, alias="X-LLM-Provider"),
 ) -> BuildingInfoResponse:
     """Orchestrate downstream requests to construct a building profile."""
     coordinates_payload = payload.coordinates.model_dump() if payload.coordinates else None
@@ -150,6 +155,18 @@ async def building_info(
         building = building.model_copy(update={"image_path": stored_image_path})
         logger.info("Stored uploaded image at %s", stored_image_path)
 
+    if any(value is None for value in (building.year_built, building.architect, building.history)):
+        updated_building = await _enrich_building_info_by_lmm(
+            llm_facade=llm_facade,
+            address=payload.address,
+            building=building,
+            provider_hint=llm_provider,
+            has_photo=decoded_image is not None,
+        )
+        if updated_building != building:
+            building = updated_building
+            sources.append("LLM Generated")
+
     if not sources:
         sources.append("Gateway Stub")
 
@@ -221,3 +238,49 @@ def _persist_image(
         ) from exc
 
     return f"/uploads/{filename}"
+
+
+async def _enrich_building_info_by_lmm(
+    *,
+    llm_facade: LLMFacade | None,
+    address: str | None,
+    building: BuildingInfo,
+    provider_hint: str | None,
+    has_photo: bool,
+) -> BuildingInfo | None:
+    """Attempt to enrich building metadata using configured LLM facade."""
+    if llm_facade is None:
+        logger.info("LLM facade not configured; skipping enrichment")
+        return None
+
+    photo_context = "Пользователь предоставил фотографию здания" if has_photo else "фотография отсутствует"
+    address_hint = address or _build_address_hint(building)
+
+    try:
+        llm_result = await llm_facade.query_building_info(
+            address=address_hint,
+            photo_context=photo_context,
+            provider_name=provider_hint,
+        )
+
+        if llm_result is not None:
+            updates = {}
+            if building.year_built is None and llm_result.year_built is not None:
+                updates["year_built"] = llm_result.year_built
+            if building.architect is None and llm_result.architect is not None:
+                updates["architect"] = llm_result.architect
+            if building.history is None and llm_result.history is not None:
+                updates["history"] = llm_result.history
+            if updates:
+                building = building.model_copy(update=updates)
+        return building
+    except LLMProviderError as exc:
+        logger.warning("LLM provider failed to enrich response: %s", exc)
+        return building
+
+
+def _build_address_hint(building: BuildingInfo) -> str:
+    """Craft a minimal address hint when the original payload omitted one."""
+    if building.location:
+        return f"координаты lat={building.location.lat}, lon={building.location.lon}"
+    return "не указан"

@@ -9,3 +9,11 @@ class OpenStreetMapServiceError(RuntimeError):
     def __init__(self, message: str, *, upstream_status: int | None = None) -> None:
         super().__init__(message)
         self.upstream_status = upstream_status
+
+
+class LLMProviderError(RuntimeError):
+    """Raised when a downstream LLM provider request fails."""
+
+
+class LLMNotConfiguredError(RuntimeError):
+    """Raised when no LLM providers are configured for the application."""
