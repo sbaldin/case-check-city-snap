@@ -42,8 +42,7 @@ async def building_info(
     payload: BuildingInfoRequest,
     geocoding_service: GeocodingService = Depends(get_geocoding_service),
     building_data_service: BuildingDataService = Depends(get_building_data_service),
-    llm_facade: LLMFacade | None = Depends(try_get_llm_facade),
-    llm_provider: str | None = Header(default=None, alias="X-LLM-Provider"),
+    llm_facade: LLMFacade | None = Depends(try_get_llm_facade)
 ) -> BuildingInfoResponse:
     """Orchestrate downstream requests to construct a building profile."""
     coordinates_payload = payload.coordinates.model_dump() if payload.coordinates else None

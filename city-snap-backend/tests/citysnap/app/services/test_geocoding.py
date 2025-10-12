@@ -15,6 +15,7 @@ class FakeResponse:
     def __init__(self, data, *, status_exc=None):
         self._data = data
         self._status_exc = status_exc
+        self.status_code = 200
 
     def raise_for_status(self):
         if self._status_exc is not None:

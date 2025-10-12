@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Protocol, Sequence
 
+import httpx
+
 from ..settings import AppSettings, get_app_settings
 from .exceptions import LLMNotConfiguredError, LLMProviderError
 
@@ -157,14 +159,13 @@ class LLMFacade:
 def _normalize_year(value: Any) -> Optional[int]:
     if value is None:
         return None
-    if isinstance(value, int):
+    if isinstance(value, (int, float)):
         return int(value)
     if isinstance(value, str):
         lowered = value.strip().lower()
         if not lowered or "неизвестно" in lowered or "unknown" in lowered:
             return None
-        # assume that building has built year between 1000 and 9999 year =D
-        match = re.search(r"\d{4}" , lowered)
+        match = re.search(r"(1[0-9]{3}|20[0-9]{2})", lowered)
         if match:
             try:
                 return int(match.group(0))
@@ -199,14 +200,96 @@ def _normalize_sources(value: Any) -> List[str]:
     return result
 
 
-class OpenAILLMProvider:
-    """Placeholder provider for OpenAI Chat Completions."""
+def _normalize_messages(messages: Sequence[Dict[str, str]]) -> List[Dict[str, str]]:
+    normalized: List[Dict[str, str]] = []
+    for item in messages:
+        if not isinstance(item, dict):
+            raise LLMProviderError("Each message must be a dictionary with 'role' and 'content' keys")
+        role = item.get("role")
+        content = item.get("content")
+        if not isinstance(role, str) or not isinstance(content, str):
+            raise LLMProviderError("Each message must have string 'role' and 'content'")
+        normalized.append({"role": role, "content": content})
+    return normalized
 
-    def __init__(self, *, api_key: str) -> None:
-        self._api_key = api_key
+
+_OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1"
+_OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"
+_OPENAI_DEFAULT_MODEL = "o4-mini"
+
+
+class OpenAILLMProvider:
+    """Async client for OpenAI Chat Completions API."""
+
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        base_url: str | None = None,
+        model: str | None = None,
+        timeout: float = 20.0,
+        temperature: float = 0.0,
+    ) -> None:
+        if not api_key or not api_key.strip():
+            raise ValueError("OpenAI provider requires a non-empty API key")
+
+        self._api_key = api_key.strip()
+        self._base_url = (base_url or _OPENAI_DEFAULT_BASE_URL).rstrip("/")
+        self._model = model or _OPENAI_DEFAULT_MODEL
+        self._timeout = timeout
+        self._temperature = temperature
 
     async def generate(self, *, messages: Sequence[Dict[str, str]]) -> str:
-        raise LLMProviderError("OpenAI provider is not implemented")
+        payload_messages = _normalize_messages(messages)
+        request_payload: Dict[str, Any] = {
+            "model": self._model,
+            "messages": payload_messages,
+            "temperature": self._temperature,
+            "tools": [{
+                "type": "web_search",
+                "user_location": {
+                    "type": "approximate",
+                    "country": "RU",
+                    "city": "Kemerovo",
+                    "region": "Kemerovo"
+                }
+            }],
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+
+        url = f"{self._base_url}{_OPENAI_CHAT_COMPLETIONS_PATH}"
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.post(url, json=request_payload, headers=headers)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:  # pragma: no cover - network failure
+            status_code = exc.response.status_code if exc.response is not None else None
+            raise LLMProviderError(f"OpenAI chat completion request rejected (status={status_code})") from exc
+        except httpx.HTTPError as exc:  # pragma: no cover - network failure
+            raise LLMProviderError("OpenAI chat completion request failed") from exc
+
+        try:
+            payload = response.json()
+        except ValueError as exc:  # pragma: no cover - invalid json
+            raise LLMProviderError("OpenAI chat completion returned invalid JSON") from exc
+
+        try:
+            choices = payload["choices"]
+            first_choice = choices[0]
+            message = first_choice["message"]
+            content = message["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise LLMProviderError("OpenAI chat completion response missing message content") from exc
+
+        if not isinstance(content, str):
+            raise LLMProviderError("OpenAI chat completion content is not a string")
+
+        return content
 
 
 class GigaChatLLMProvider:

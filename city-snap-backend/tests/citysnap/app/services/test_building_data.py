@@ -14,6 +14,7 @@ class FakeResponse:
         self._payload = payload
         self._status_exc = status_exc
         self._json_exc = json_exc
+        self.status_code = 200
 
     def raise_for_status(self):
         if self._status_exc is not None:
