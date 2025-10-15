@@ -9,36 +9,27 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Protocol, Sequence
 
-import httpx
-
 from ..settings import AppSettings, get_app_settings
 from .exceptions import LLMNotConfiguredError, LLMProviderError
+from .llm_providers import GigaChatLLMProvider, OpenAILLMProvider
 
 logger = logging.getLogger(__name__)
 
 PROMPT_SYSTEM = (
-    "Ты — историк-эксперт и исследователь архитектуры. "
+    "Ты — БОТ и историк-эксперт и исследователь архитектуры. "
     "Твоя задача — по адресу и описанию (фотографии) здания предоставить:\n"
     "1) Год постройки (если известно),\n"
     "2) Имя архитектора (если известно),\n"
-    "3) Краткую историческую справку (описание истории здания, значимые события, стиль).\n"
-    "Если ты не уверен в каком-то факте, укажи «неизвестно». "
-    "Где возможно, укажи источники (название статьи, книга, веб-ресурс).\n"
+    "3) Краткую историческую справку (описание истории здания, значимые события, стиль)(максимум 3 предложения).\n"
+    "Если ты не уверен в каком-то факте, укажи «неизвестно». Не пытайся продолжать диалог. \n"
     "Формат ответа: JSON с полями: `year`, `architect`, `history`, `sources`."
 )
 
 PROMPT_USER_TEMPLATE = (
     "Адрес: {address}\n"
-    "Описание фото: {photo_context}\n"
-    "Пожалуйста, верни JSON:\n"
-    "{{\n"
-    '  "year": <число или "неизвестно">,\n'
-    '  "architect": <имя архитектора или "неизвестно">,\n'
-    '  "history": <текст исторической справки или строка "не удалось найти">,\n'
-    '  "sources": [список источников или пустой список]\n'
-    "}}\n"
+    "{photo_section}"
+    "Пожалуйста, верни JSON с полями: `year`, `architect`, `history`, `sources`: \n"
 )
-
 
 class LLMProvider(Protocol):
     """Protocol describing the minimal LLM interface expected by the facade."""
@@ -72,7 +63,6 @@ class LLMFacade:
     @property
     def available_providers(self) -> List[str]:
         """Return the ordered list of configured provider names."""
-        # Preserve insertion order from initialization
         return list(self._providers.keys())
 
     @property
@@ -113,14 +103,21 @@ class LLMFacade:
             normalized = provider_name.lower()
             if normalized in self._providers:
                 return normalized
-            logger.warning("Requested LLM provider %r is not configured; falling back to default", provider_name)
+            logger.warning(
+                "Requested LLM provider %r is not configured; falling back to default",
+                provider_name,
+            )
         return self._default_provider
 
     @staticmethod
     def _build_prompt(*, address: Optional[str], photo_context: Optional[str]) -> List[Dict[str, str]]:
+        photo_section = ""
+        if photo_context:
+            photo_section = f"Описание фото: {photo_context}\n"
+
         user_prompt = PROMPT_USER_TEMPLATE.format(
             address=address or "не указан",
-            photo_context=photo_context or "описание недоступно",
+            photo_section=photo_section,
         )
         return [
             {"role": "system", "content": PROMPT_SYSTEM},
@@ -132,7 +129,6 @@ class LLMFacade:
         if not raw_response or not raw_response.strip():
             logger.warning("LLM response was empty")
             return None
-
         try:
             payload = json.loads(raw_response)
         except json.JSONDecodeError:
@@ -200,109 +196,8 @@ def _normalize_sources(value: Any) -> List[str]:
     return result
 
 
-def _normalize_messages(messages: Sequence[Dict[str, str]]) -> List[Dict[str, str]]:
-    normalized: List[Dict[str, str]] = []
-    for item in messages:
-        if not isinstance(item, dict):
-            raise LLMProviderError("Each message must be a dictionary with 'role' and 'content' keys")
-        role = item.get("role")
-        content = item.get("content")
-        if not isinstance(role, str) or not isinstance(content, str):
-            raise LLMProviderError("Each message must have string 'role' and 'content'")
-        normalized.append({"role": role, "content": content})
-    return normalized
-
-
-_OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1"
-_OPENAI_CHAT_COMPLETIONS_PATH = "/chat/completions"
-_OPENAI_DEFAULT_MODEL = "o4-mini"
-
-
-class OpenAILLMProvider:
-    """Async client for OpenAI Chat Completions API."""
-
-    def __init__(
-        self,
-        *,
-        api_key: str,
-        base_url: str | None = None,
-        model: str | None = None,
-        timeout: float = 20.0,
-        temperature: float = 0.0,
-    ) -> None:
-        if not api_key or not api_key.strip():
-            raise ValueError("OpenAI provider requires a non-empty API key")
-
-        self._api_key = api_key.strip()
-        self._base_url = (base_url or _OPENAI_DEFAULT_BASE_URL).rstrip("/")
-        self._model = model or _OPENAI_DEFAULT_MODEL
-        self._timeout = timeout
-        self._temperature = temperature
-
-    async def generate(self, *, messages: Sequence[Dict[str, str]]) -> str:
-        payload_messages = _normalize_messages(messages)
-        request_payload: Dict[str, Any] = {
-            "model": self._model,
-            "messages": payload_messages,
-            "temperature": self._temperature,
-            "tools": [{
-                "type": "web_search",
-                "user_location": {
-                    "type": "approximate",
-                    "country": "RU",
-                    "city": "Kemerovo",
-                    "region": "Kemerovo"
-                }
-            }],
-        }
-
-        headers = {
-            "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json",
-        }
-
-        url = f"{self._base_url}{_OPENAI_CHAT_COMPLETIONS_PATH}"
-
-        try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                response = await client.post(url, json=request_payload, headers=headers)
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:  # pragma: no cover - network failure
-            status_code = exc.response.status_code if exc.response is not None else None
-            raise LLMProviderError(f"OpenAI chat completion request rejected (status={status_code})") from exc
-        except httpx.HTTPError as exc:  # pragma: no cover - network failure
-            raise LLMProviderError("OpenAI chat completion request failed") from exc
-
-        try:
-            payload = response.json()
-        except ValueError as exc:  # pragma: no cover - invalid json
-            raise LLMProviderError("OpenAI chat completion returned invalid JSON") from exc
-
-        try:
-            choices = payload["choices"]
-            first_choice = choices[0]
-            message = first_choice["message"]
-            content = message["content"]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise LLMProviderError("OpenAI chat completion response missing message content") from exc
-
-        if not isinstance(content, str):
-            raise LLMProviderError("OpenAI chat completion content is not a string")
-
-        return content
-
-
-class GigaChatLLMProvider:
-    """Placeholder provider for Sber GigaChat API."""
-
-    def __init__(self, *, api_key: str) -> None:
-        self._api_key = api_key
-
-    async def generate(self, *, messages: Sequence[Dict[str, str]]) -> str:
-        raise LLMProviderError("GigaChat provider is not implemented")
-
-
 def _build_llm_facade(open_api_key: Optional[str], giga_chat_api_key: Optional[str]) -> LLMFacade:
+    """Build an `LLMFacade` from provided API keys."""
     providers: Dict[str, LLMProvider] = {}
     default_provider: Optional[str] = None
 
@@ -316,7 +211,9 @@ def _build_llm_facade(open_api_key: Optional[str], giga_chat_api_key: Optional[s
             default_provider = "openai"
 
     if not providers or default_provider is None:
-        raise LLMNotConfiguredError("No LLM providers configured. Set OPEN_API_KEY and/or GIGA_CHAT_API_KEY.")
+        raise LLMNotConfiguredError(
+            "No LLM providers configured. Set OPEN_API_KEY and/or GIGA_CHAT_API_KEY."
+        )
 
     return LLMFacade(providers=providers, default_provider=default_provider)
 

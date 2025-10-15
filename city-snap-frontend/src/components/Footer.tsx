@@ -4,7 +4,7 @@ const Footer = () => (
       <div className="mb-3">
         <h6>CitySnap</h6>
         <small className="text-muted">
-          Сервис для получения исторической информации о зданиях по фотографии
+          Сервис для получения исторической информации о зданиях
         </small>
       </div>
       <div>

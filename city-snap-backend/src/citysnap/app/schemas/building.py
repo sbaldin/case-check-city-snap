@@ -38,4 +38,4 @@ class BuildingInfo(BaseModel):
 
 class BuildingInfoResponse(BaseModel):
     building: BuildingInfo
-    source: List[str] = Field(default_factory=lambda: ["Stub", "OpenStreetMap (planned)", "Wikipedia (planned)"])
+    source: List[str] = []

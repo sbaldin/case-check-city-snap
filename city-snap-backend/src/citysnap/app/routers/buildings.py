@@ -10,7 +10,7 @@ from pathlib import Path
 
 import logging
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from ..schemas import BuildingInfo, BuildingInfoRequest, BuildingInfoResponse, Coordinates
 from ..services import (
@@ -159,7 +159,6 @@ async def building_info(
             llm_facade=llm_facade,
             address=payload.address,
             building=building,
-            provider_hint=llm_provider,
             has_photo=decoded_image is not None,
         )
         if updated_building != building:
@@ -244,7 +243,6 @@ async def _enrich_building_info_by_lmm(
     llm_facade: LLMFacade | None,
     address: str | None,
     building: BuildingInfo,
-    provider_hint: str | None,
     has_photo: bool,
 ) -> BuildingInfo | None:
     """Attempt to enrich building metadata using configured LLM facade."""
@@ -259,7 +257,6 @@ async def _enrich_building_info_by_lmm(
         llm_result = await llm_facade.query_building_info(
             address=address_hint,
             photo_context=photo_context,
-            provider_name=provider_hint,
         )
 
         if llm_result is not None:
