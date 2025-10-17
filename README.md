@@ -1,81 +1,80 @@
 # CitySnap
 
-This repository contains the Guide-Architect prototype, которое по загруженной фотографии здания и его координатам или адресу предоставляет информацию.
+CitySnap — прототип сервиса «Гид-архитектор», который по загруженной фотографии здания, его координатам или адресу подбирает историческую и архитектурную информацию.
 
-Состоит из двух сервисов:
- - [gateway_service](city-snap-backend)
- - [frontend]
+## Модули репозитория
+- `city-snap-backend` — FastAPI‑шлюз, который принимает запросы от фронтенда, оркестрирует агентов (геокодирование, запрос к LLM, агрегатор данных) и возвращает структурированный ответ.
+- `city-snap-frontend` — React приложение, позволяющее загрузить фотографию здания, указать адрес/координаты и визуализировать ответ сервиса.
 
+## Локальный запуск
 
-# Gateway Service (FastAPI)
-
-Minimal FastAPI gateway for Guide-Architect.
-
-## Endpoints
-- GET /api/v1/health — simple health check.
-- POST /api/v1/building/info — accepts JSON with address, coordinates and/or image_base64 and returns a stubbed building info response.
-
-## Init Poetry in this folder with an in-project virtualenv (.venv)
-
-This service is set up to keep its virtualenv inside the `gateway_service` folder.
-The `poetry.toml` here already enforces that:
-
-```
-[virtualenvs]
-in-project = true
-package-mode = false
-```
-
-Quick start:
-
-1) Ensure Poetry is installed (see https://python-poetry.org/docs/#installation).
-
-2) From the repo root, change into this service folder:
-
-```
-cd gateway_service
-```
-
-3) Select the Python you want (for example Python 3.10) and create the in-folder venv:
-
-```
-poetry env use python3.10
-```
-
-4) Install dependencies (this will create `.venv/` inside `gateway_service`):
-
-```
-poetry install
-```
-
-5) (Optional) Activate the venv in your shell:
-
-- Bash/Zsh:
-
+### Backend (`city-snap-backend`)
+- Требования: Python 3.10+, Poetry.
+- Шаги:
+  ```bash
+  cd city-snap-backend
+  poetry env use python3.10 
+  poetry install
+  poetry run uvicorn citysnap.app.main:app --reload --port 8081
   ```
-  source .venv/bin/activate
+- Вместо прямого вызова uvicorn можно воспользоваться скриптом: `poetry run api`.
+
+### Frontend (`city-snap-frontend`)
+- Требования: Node.js 18+ (npm входит в состав).
+- Шаги:
+  ```bash
+  cd city-snap-frontend
+  npm install
+  npm run dev -- --host
   ```
+- По умолчанию Vite поднимает дев-сервер на `http://localhost:5173`.
 
-- Fish:
+## API Gateway (текущие эндпоинты)
 
-  ```
-  source .venv/bin/activate.fish
-  ```
+Бэкенд служба по умолчанию доступна на `http://localhost:8081`.
 
-You can also avoid manual activation by always prefixing commands with `poetry run`.
+- `GET /api/v1/health` — проверка готовности сервиса.
+- `POST /api/v1/building/info` — принимает JSON с адресом, координатами и/или фотографией (base64) и возвращает сведения о здании.
 
-## Run (dev)
+### Пример запроса
 
-- With uvicorn directly:
-
-```
-poetry run uvicorn citysnap.app.main:app --reload --port 8081
-```
-
-- Or via the Poetry script (defined in pyproject.toml as `api`):
-
-```
-poetry run api
+```json
+{
+  "address": "Nevsky Prospect 28, St. Petersburg, 191186",
+  "coordinates": { "lat": 59.935, "lon": 30.325 },
+  "image_base64": "/9j/4AAQSkZJRgABAQAAAQABAAD..."
+}
 ```
 
+### Пример ответа
+
+```json
+{
+  "building": {
+    "name": "House of Soviets",
+    "year_built": 1938,
+    "architect": "Lev Rudnev",
+    "location": {
+      "lat": 59.9311,
+      "lon": 30.3609
+    },
+    "history": "Built in the late 1930s, the House of Soviets is an example of Stalinist architecture, intended as an administrative hub."
+  },
+  "source": ["OpenStreetMap API", "Open AI LLM"]
+}
+```
+
+### Curl-примеры
+
+```bash
+# Запрос по адресу
+curl -X POST http://localhost:8081/api/v1/building/info \
+  -H "Content-Type: application/json" \
+  -d '{"address": "Красная Горка, 19 Кемерово"}'
+
+# Запрос по координатам
+curl -X POST http://localhost:8081/api/v1/building/info \
+  -H "Content-Type: application/json" \
+  -d '{"coordinates": {"lat": 55.3754026, "lon": 86.0725171}}'
+```
 
