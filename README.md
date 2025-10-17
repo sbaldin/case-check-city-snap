@@ -10,6 +10,10 @@ CitySnap — прототип сервиса «Гид-архитектор», к
 
 ### Backend (`city-snap-backend`)
 - Требования: Python 3.10+, Poetry.
+- Переменные окружения: перед стартом укажите `OPEN_API_KEY` (ключ провайдера LLM OpenAI, получить нужно на сайте https://openai.com/api/). Без него историческое обогащение с помощью LLM будет недоступно.
+  ```bash
+  export OPEN_API_KEY=sk-********
+  ```
 - Шаги:
   ```bash
   cd city-snap-backend
@@ -29,20 +33,22 @@ CitySnap — прототип сервиса «Гид-архитектор», к
   ```
 - По умолчанию Vite поднимает дев-сервер на `http://localhost:5173`.
 
-## API Gateway (текущие эндпоинты)
+## [city-snap-backend](city-snap-backend)
 
 Бэкенд служба по умолчанию доступна на `http://localhost:8081`.
 
 - `GET /api/v1/health` — проверка готовности сервиса.
-- `POST /api/v1/building/info` — принимает JSON с адресом, координатами и/или фотографией (base64) и возвращает сведения о здании.
+- `POST /api/v1/building/info` — принимает JSON, где в поле `payload` передаются адрес, координаты и/или фотография (base64), и возвращает сведения о здании.
 
 ### Пример запроса
 
 ```json
 {
-  "address": "Nevsky Prospect 28, St. Petersburg, 191186",
-  "coordinates": { "lat": 59.935, "lon": 30.325 },
-  "image_base64": "/9j/4AAQSkZJRgABAQAAAQABAAD..."
+  "payload": {
+    "address": "Nevsky Prospect 28, St. Petersburg, 191186",
+    "coordinates": { "lat": 59.935, "lon": 30.325 },
+    "image_base64": "/9j/4AAQSkZJRgABAQAAAQABAAD..."
+  }
 }
 ```
 
@@ -70,11 +76,10 @@ CitySnap — прототип сервиса «Гид-архитектор», к
 # Запрос по адресу
 curl -X POST http://localhost:8081/api/v1/building/info \
   -H "Content-Type: application/json" \
-  -d '{"address": "Красная Горка, 19 Кемерово"}'
+  -d '{"payload": {"address": "Красная Горка, 19 Кемерово"}}'
 
 # Запрос по координатам
 curl -X POST http://localhost:8081/api/v1/building/info \
   -H "Content-Type: application/json" \
-  -d '{"coordinates": {"lat": 55.3754026, "lon": 86.0725171}}'
+  -d '{"payload": {"coordinates": {"lat": 55.3754026, "lon": 86.0725171}}}'
 ```
-
