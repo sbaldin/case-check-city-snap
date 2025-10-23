@@ -27,14 +27,14 @@ const fileToBase64 = (file: File): Promise<string> =>
 export const buildingService = {
     async searchBuilding(payload: BuildingQueryPayload): Promise<BuildingInfoResponse> {
         const {address, coordinates, photo} = payload;
-        const body: Record<string, Record<string, any>> = { payload: { address, coordinates } };
+        const body: Record<string, unknown> = { address, coordinates };
 
-        if (!body.payload.address && !body.payload.coordinates) {
+        if (!body.address && !body.coordinates) {
             throw new Error('Необходимо указать адрес или координаты для поиска здания');
         }
 
         if (photo) {
-            body.payload.image_base64 = await fileToBase64(photo);
+            body.image_base64 = await fileToBase64(photo);
         }
 
         const response = await fetch(`${API_BASE_URL}/building/info`, {
