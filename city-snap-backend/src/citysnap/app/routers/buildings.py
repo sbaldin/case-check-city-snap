@@ -161,7 +161,7 @@ async def building_info(
             building=building,
             has_photo=decoded_image is not None,
         )
-        if updated_building != building:
+        if updated_building is not None and updated_building != building:
             building = updated_building
             sources.append("LLM Generated")
 

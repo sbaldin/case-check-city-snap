@@ -4,7 +4,6 @@ from .building_data import BuildingDataService, get_building_data_service
 from .exceptions import OpenStreetMapServiceError
 from .geocoding import GeocodingService, get_geocoding_service
 from .llm import (
-    GigaChatLLMProvider,
     LLMFacade,
     LLMNotConfiguredError,
     LLMProvider,
@@ -26,7 +25,6 @@ __all__ = [
     "LLMProviderError",
     "LLMNotConfiguredError",
     "OpenAILLMProvider",
-    "GigaChatLLMProvider",
     "get_geocoding_service",
     "get_building_data_service",
     "get_llm_facade",

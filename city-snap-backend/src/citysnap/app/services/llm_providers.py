@@ -83,7 +83,7 @@ class OpenAILLMProvider:
         api_key: str,
         base_url: str | None = None,
         model: str | None = None,
-        timeout: float = 60.0,
+        timeout: float = 120.0,
         tools: List[Dict[str, Any]] | None = None,
     ) -> None:
         if not api_key or not api_key.strip():
@@ -114,7 +114,9 @@ class OpenAILLMProvider:
         except httpx.HTTPStatusError as exc:  # pragma: no cover - network failure path
             raise LLMProviderError(f"OpenAI responses request failed: {exc}") from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network failure path
-            raise LLMProviderError(f"OpenAI responses request error: {exc}") from exc
+            req = getattr(exc, 'request', None)
+            where = f" during {req.method} {req.url}" if req else ""
+            raise LLMProviderError(f"OpenAI responses request error{where}: {exc!r}") from exc
 
         try:
             data = response.json()
@@ -122,16 +124,3 @@ class OpenAILLMProvider:
             raise LLMProviderError(f"OpenAI responses returned invalid JSON: {exc}") from exc
 
         return _extract_response_text(data)
-
-
-class GigaChatLLMProvider:
-    """Placeholder provider for Sber GigaChat API."""
-
-    def __init__(self, *, api_key: str) -> None:
-        self._api_key = api_key
-
-    async def generate(self, *, messages: Sequence[Dict[str, str]]) -> str:
-        raise LLMProviderError("GigaChat provider is not implemented")
-
-
-__all__ = ["OpenAILLMProvider", "GigaChatLLMProvider"]

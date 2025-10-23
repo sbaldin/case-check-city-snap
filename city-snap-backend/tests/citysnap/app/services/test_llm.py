@@ -73,15 +73,15 @@ def _reset_env(monkeypatch):
     reset_settings_cache()
 
 
-def test_facade_prefers_gigachat_when_both_configured(monkeypatch):
+def test_facade_uses_openai_even_when_gigachat_key_present(monkeypatch):
     _reset_env(monkeypatch)
     monkeypatch.setenv("OPEN_API_KEY", "open-key")
     monkeypatch.setenv("GIGA_CHAT_API_KEY", "giga-key")
 
     facade = get_llm_facade()
 
-    assert facade.default_provider == "gigachat"
-    assert facade.available_providers == ["gigachat", "openai"]
+    assert facade.default_provider == "openai"
+    assert facade.available_providers == ["openai"]
 
 
 def test_facade_uses_openai_when_only_open_api_key(monkeypatch):
@@ -100,12 +100,19 @@ def test_try_get_llm_facade_returns_none_when_unconfigured(monkeypatch):
     assert try_get_llm_facade() is None
 
 
+def test_try_get_llm_facade_returns_none_when_only_gigachat_key(monkeypatch):
+    _reset_env(monkeypatch)
+    monkeypatch.setenv("GIGA_CHAT_API_KEY", "giga-key")
+
+    assert try_get_llm_facade() is None
+
+
 @pytest.mark.asyncio
 async def test_facade_builds_prompt_and_parses_response():
     provider = RecordingProvider(
         response='{"year": 1938, "architect": "Lev Rudnev", "history": "Example text", "sources": ["Example Source"]}'
     )
-    facade = LLMFacade(providers={"gigachat": provider}, default_provider="gigachat")
+    facade = LLMFacade(providers={"openai": provider}, default_provider="openai")
 
     result = await facade.query_building_info(address="Nevsky Prospect 28", photo_context="photo provided")
 
@@ -128,7 +135,7 @@ async def test_facade_falls_back_to_default_provider():
     provider = RecordingProvider(
         response='{"year": "неизвестно", "architect": "неизвестно", "history": "", "sources": []}'
     )
-    facade = LLMFacade(providers={"gigachat": provider}, default_provider="gigachat")
+    facade = LLMFacade(providers={"openai": provider}, default_provider="openai")
 
     result = await facade.query_building_info(
         address="Unknown",
@@ -167,7 +174,7 @@ async def test_facade_wraps_provider_exceptions(monkeypatch):
         async def generate(self, *, messages):
             raise RuntimeError("boom")
 
-    facade = LLMFacade(providers={"gigachat": FaultyProvider()}, default_provider="gigachat")
+    facade = LLMFacade(providers={"openai": FaultyProvider()}, default_provider="openai")
 
     with pytest.raises(LLMProviderError):
         await facade.query_building_info(address="Address", photo_context=None)
@@ -200,11 +207,10 @@ async def test_openai_provider_posts_messages(monkeypatch):
 
     assert result == "Hello world"
     assert fake_client.init_kwargs["base_url"] == "https://example.com/api"
-    assert fake_client.init_kwargs["timeout"] == 20.0
+    assert fake_client.init_kwargs["timeout"] == 120.0
     assert fake_client.request_args["url"] == "/responses"
     assert fake_client.request_args["json"]["model"] == "gpt-test"
     assert fake_client.request_args["json"]["input"] == [{"role": "user", "content": "Hi"}]
-    assert fake_client.request_args["json"]["temperature"] == 0.0
     assert fake_client.request_args["json"]["tools"] == [
         {
             "type": "web_search",

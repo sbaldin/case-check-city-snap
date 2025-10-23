@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Protocol, Sequence
 
 from ..settings import AppSettings, get_app_settings
 from .exceptions import LLMNotConfiguredError, LLMProviderError
-from .llm_providers import GigaChatLLMProvider, OpenAILLMProvider
+from .llm_providers import OpenAILLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ PROMPT_SYSTEM = (
 PROMPT_USER_TEMPLATE = (
     "Адрес: {address}\n"
     "{photo_section}"
-    "Пожалуйста, верни JSON с полями: `year`, `architect`, `history`, `sources`: \n"
+    "Пожалуйста, верни JSON с полями: `year`, `architect`, `history`, `sources`.\n"
 )
 
 class LLMProvider(Protocol):
@@ -201,10 +201,6 @@ def _build_llm_facade(open_api_key: Optional[str], giga_chat_api_key: Optional[s
     providers: Dict[str, LLMProvider] = {}
     default_provider: Optional[str] = None
 
-    if giga_chat_api_key:
-        providers["gigachat"] = GigaChatLLMProvider(api_key=giga_chat_api_key)
-        default_provider = "gigachat"
-
     if open_api_key:
         providers["openai"] = OpenAILLMProvider(api_key=open_api_key)
         if default_provider is None:
@@ -229,10 +225,10 @@ def get_llm_facade(settings: Optional[AppSettings] = None) -> LLMFacade:
     return _build_llm_facade_cached(settings.open_api_key, settings.giga_chat_api_key)
 
 
-def try_get_llm_facade(settings: Optional[AppSettings] = None) -> Optional[LLMFacade]:
+def try_get_llm_facade() -> Optional[LLMFacade]:
     """Return a cached LLMFacade, or None when no providers are configured."""
     try:
-        return get_llm_facade(settings=settings)
+        return get_llm_facade()
     except LLMNotConfiguredError:
         return None
 
@@ -249,7 +245,6 @@ __all__ = [
     "LLMQueryResult",
     "LLMNotConfiguredError",
     "OpenAILLMProvider",
-    "GigaChatLLMProvider",
     "get_llm_facade",
     "try_get_llm_facade",
     "reset_llm_facade_cache",
