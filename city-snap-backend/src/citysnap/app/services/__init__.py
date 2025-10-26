@@ -1,6 +1,7 @@
 """Service layer for integrating with downstream agents."""
 
-from .building_data import BuildingDataService, get_building_data_service
+from .open_street_map import OpenStreetMapService, get_building_data_service
+from .building_info import BuildingInfoOrchestrator, get_building_info_orchestrator
 from .exceptions import OpenStreetMapServiceError
 from .geocoding import GeocodingService, get_geocoding_service
 from .llm import (
@@ -14,10 +15,12 @@ from .llm import (
     try_get_llm_facade,
     reset_llm_facade_cache,
 )
+from .llm_enricher import LlmBuildingInfoEnricher, get_llm_building_info_enricher
+from .storage import ImageStorageService, get_image_storage_service
 
 __all__ = [
     "OpenStreetMapServiceError",
-    "BuildingDataService",
+    "OpenStreetMapService",
     "GeocodingService",
     "LLMFacade",
     "LLMProvider",
@@ -25,9 +28,15 @@ __all__ = [
     "LLMProviderError",
     "LLMNotConfiguredError",
     "OpenAILLMProvider",
+    "BuildingInfoOrchestrator",
+    "LlmBuildingInfoEnricher",
+    "ImageStorageService",
     "get_geocoding_service",
     "get_building_data_service",
     "get_llm_facade",
     "try_get_llm_facade",
+    "get_building_info_orchestrator",
+    "get_llm_building_info_enricher",
+    "get_image_storage_service",
     "reset_llm_facade_cache",
 ]

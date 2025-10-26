@@ -16,7 +16,7 @@ _DEFAULT_BASE_URL = "https://www.openstreetmap.org/api/0.6"
 _DEFAULT_USER_AGENT = "CitySnapGateway/0.1 (+https://github.com/fesswood)"
 
 
-class BuildingDataService:
+class OpenStreetMapService:
     """Retrieve metadata about buildings from the OpenStreetMap API."""
 
     def __init__(
@@ -42,7 +42,8 @@ class BuildingDataService:
             self._logger.debug("No building_id provided, skipping building data fetch")
             return None
 
-        last_error: OpenStreetMapServiceError | None = None
+        last_error: Optional[OpenStreetMapServiceError] = None
+
         for element_type in ("node", "way"):
             try:
                 payload = await self._fetch_element_payload(element_type, building_id)
@@ -228,9 +229,9 @@ class BuildingDataService:
         return None
 
 
-def get_building_data_service() -> BuildingDataService:
+def get_building_data_service() -> OpenStreetMapService:
     """Factory for FastAPI dependency injection."""
     base_url = os.getenv("CITYSNAP_BUILDING_DATA_BASE_URL", _DEFAULT_BASE_URL)
     user_agent = os.getenv("CITYSNAP_BUILDING_DATA_USER_AGENT", _DEFAULT_USER_AGENT)
     timeout = float(os.getenv("CITYSNAP_BUILDING_DATA_TIMEOUT", "10.0"))
-    return BuildingDataService(base_url=base_url, user_agent=user_agent, timeout=timeout)
+    return OpenStreetMapService(base_url=base_url, user_agent=user_agent, timeout=timeout)

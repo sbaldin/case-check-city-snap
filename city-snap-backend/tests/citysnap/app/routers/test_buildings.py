@@ -93,3 +93,44 @@ def test_building_info_saves_base64_image(tmp_path, monkeypatch, client):
     assert image_path.exists()
     assert image_path.read_bytes() == b"sample-image"
     assert building_service.fetch_calls == [777]
+
+
+def test_building_info_requires_address_or_coordinates(client):
+    test_client, _, _ = client
+
+    response = test_client.post("/api/v1/building/info", json={})
+
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "OpenStreetMap gateway requires either an address or coordinates to query OpenStreetMap APIs"
+    )
+
+
+def test_building_info_returns_not_found_when_geocode_fails(client):
+    test_client, geocoding_service, _ = client
+
+    response = test_client.post(
+        "/api/v1/building/info",
+        json={"address": "Unknown Street"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "OpenStreetMap Nominatim could not resolve the provided location"
+    assert geocoding_service.geocode_calls == ["Unknown Street"]
+    assert geocoding_service.reverse_calls == []
+
+
+def test_building_info_rejects_invalid_base64_image(client):
+    test_client, _, _ = client
+
+    response = test_client.post(
+        "/api/v1/building/info",
+        json={
+            "coordinates": {"lat": 59.935, "lon": 30.325},
+            "image_base64": "@@@invalid@@@",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "OpenStreetMap gateway cannot decode the provided base64 photo"
