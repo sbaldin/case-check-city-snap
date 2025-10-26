@@ -2,6 +2,9 @@
 
 CitySnap — прототип сервиса «Гид-архитектор», который по загруженной фотографии здания, его координатам или адресу подбирает историческую и архитектурную информацию.
 
+##
+Спецификацию вы можете найти в [google docs](https://docs.google.com/document/d/1GfL4O149lIRNPgLiRS-NwLaaWsizv5HgNkYWnIEMNQU/edit?pli=1&tab=t.0).
+
 ## Модули репозитория
 - `city-snap-backend` — FastAPI‑шлюз, который принимает запросы от фронтенда, оркестрирует агентов (геокодирование, запрос к LLM, агрегатор данных) и возвращает структурированный ответ.
 - `city-snap-frontend` — React приложение, позволяющее загрузить фотографию здания, указать адрес/координаты и визуализировать ответ сервиса.
@@ -38,17 +41,48 @@ CitySnap — прототип сервиса «Гид-архитектор», к
 Бэкенд служба по умолчанию доступна на `http://localhost:8081`.
 
 - `GET /api/v1/health` — проверка готовности сервиса.
-- `POST /api/v1/building/info` — принимает JSON, где в поле `payload` передаются адрес, координаты и/или фотография (base64), и возвращает сведения о здании.
+- `POST /api/v1/building/info` — принимает адрес, координаты и/или фотографию (base64) в теле запроса и возвращает сведения о здании.
+
+### Поток обработки запроса
+
+```mermaid
+sequenceDiagram
+    participant Client as Клиент
+    participant Router as FastAPI‑роутер
+    participant Orchestrator as BuildingInfoOrchestrator
+    participant Geocoder as GeocodingService
+    participant OSM as OpenStreetMapService
+    participant Storage as ImageStorageService
+    participant LLM as LlmBuildingInfoEnricher
+
+    Client->>Router: POST /api/v1/building/info<br/>address / coordinates / image
+    Router->>Router: Проверка payload (адрес или координаты, корректный base64)
+    Router->>Orchestrator: build(payload)
+    Orchestrator->>Storage: store(image_bytes?)
+    Storage-->>Orchestrator: stored image_path
+    Orchestrator->>Geocoder: geocode() / reverse_geocode()
+    Geocoder-->>Orchestrator: coordinates + building_id
+    Orchestrator->>OSM: fetch(building_id)     
+    OSM-->>Orchestrator: BuildingInfo (архитектор, год постройки, история)
+    alt BuildingInfo неполный
+        Orchestrator->>LLM: enrich()
+        LLM-->>Orchestrator: BuildingInfo (архитектор, год постройки, история) + Флаг, что данные из LLM
+    end
+    Orchestrator-->>Router: BuildingInfoResponse<br/>или доменный exception
+    Router-->>Client: HTTP 200 / 4xx / 5xx + detail
+```
+
+Оркестратор больше не зависит от FastAPI и выбрасывает доменные ошибки (`BuildingInfoValidationError`, `BuildingInfoNotFoundError`, `BuildingInfoUpstreamError`). Роутер конвертирует их в корректные HTTP‑ответы и выполняет простые проверки (например, что передан адрес или координаты).
 
 ### Пример запроса
 
+Тестовые данные для запросов доступы на [google sheet](https://docs.google.com/spreadsheets/d/15YiIGK7tJGbTf-MMBv1-j_M1O-yr_wCrym39Z_2sDwk/edit?gid=0#gid=0).
+
 ```json
 {
-  "payload": {
-    "address": "Nevsky Prospect 28, St. Petersburg, 191186",
-    "coordinates": { "lat": 59.935, "lon": 30.325 },
-    "image_base64": "/9j/4AAQSkZJRgABAQAAAQABAAD..."
-  }
+  "address": "Nevsky Prospect 28, St. Petersburg, 191186",
+  "coordinates": { "lat": 59.935, "lon": 30.325 },
+  "image_base64": "/9j/4AAQSkZJRgABAQAAAQABAAD..."
 }
 ```
 
@@ -76,10 +110,10 @@ CitySnap — прототип сервиса «Гид-архитектор», к
 # Запрос по адресу
 curl -X POST http://localhost:8081/api/v1/building/info \
   -H "Content-Type: application/json" \
-  -d '{"payload": {"address": "Красная Горка, 19 Кемерово"}}'
+  -d '{"address": "Красная Горка, 19 Кемерово"}'
 
 # Запрос по координатам
 curl -X POST http://localhost:8081/api/v1/building/info \
   -H "Content-Type: application/json" \
-  -d '{"payload": {"coordinates": {"lat": 55.3754026, "lon": 86.0725171}}}'
+  -d '{"coordinates": {"lat": 55.3754026, "lon": 86.0725171}}'
 ```
