@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 from typing import Any
 
 import httpx
 
 from ..schemas import Coordinates, CoordinatesAndBuildingId
-from .exceptions import OpenStreetMapServiceError
 from ..schemas.building import BuildingId
+from .exceptions import OpenStreetMapServiceError
 
 _DEFAULT_BASE_URL = "https://nominatim.openstreetmap.org/search"
 _DEFAULT_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
@@ -60,7 +60,10 @@ class GeocodingService:
                 address,
                 status_code,
             )
-            raise OpenStreetMapServiceError("OpenStreetMap Nominatim rejected the request", upstream_status=status_code) from exc
+            raise OpenStreetMapServiceError(
+                "OpenStreetMap Nominatim rejected the request",
+                                            upstream_status=status_code
+            ) from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network error path
             self._logger.exception("Failed to call OpenStreetMap geocoding address=%r", address)
             raise OpenStreetMapServiceError("Failed to call OpenStreetMap Nominatim API") from exc
@@ -132,7 +135,10 @@ class GeocodingService:
                 coordinates.lon,
                 status_code,
             )
-            raise OpenStreetMapServiceError("OpenStreetMap Nominatim rejected the request", upstream_status=status_code) from exc
+            raise OpenStreetMapServiceError(
+                "OpenStreetMap Nominatim rejected the request",
+                upstream_status=status_code
+            ) from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network error path
             self._logger.exception(
                 "Failed to call OpenStreetMap reverse geocoding lat=%s lon=%s",

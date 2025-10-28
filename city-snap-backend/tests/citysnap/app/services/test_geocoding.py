@@ -1,13 +1,13 @@
 import httpx
 import pytest
 
-from citysnap.app.services.exceptions import OpenStreetMapServiceError
 from citysnap.app.schemas import Coordinates
+from citysnap.app.services.exceptions import OpenStreetMapServiceError
 from citysnap.app.services.geocoding import (
-    GeocodingService,
     _DEFAULT_BASE_URL,
     _DEFAULT_REVERSE_URL,
     _DEFAULT_USER_AGENT,
+    GeocodingService,
 )
 
 

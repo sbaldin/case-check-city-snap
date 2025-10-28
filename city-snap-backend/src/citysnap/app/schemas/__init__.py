@@ -5,7 +5,7 @@ from .building import (
     BuildingInfoRequest,
     BuildingInfoResponse,
     Coordinates,
-    CoordinatesAndBuildingId
+    CoordinatesAndBuildingId,
 )
 
 __all__ = [

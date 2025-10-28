@@ -18,8 +18,30 @@ httpx = "^0.27.2"
 pytest = "^8.3"
 pytest-asyncio = "^0.23"
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6.4"
+
 [tool.poetry.scripts]
 api = "citysnap.app.main:run"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["citysnap"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.ruff.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends", "fastapi.Query", "fastapi.params.Query"]
 
 [build-system]
 requires = ["poetry-core"]

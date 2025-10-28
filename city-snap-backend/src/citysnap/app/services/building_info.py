@@ -9,8 +9,12 @@ from typing import Optional
 
 from fastapi import Depends
 
-from ..schemas import BuildingInfo, BuildingInfoRequest, BuildingInfoResponse, Coordinates
-from .open_street_map import OpenStreetMapService, get_building_data_service
+from ..schemas import (
+    BuildingInfo,
+    BuildingInfoRequest,
+    BuildingInfoResponse,
+    Coordinates,
+)
 from .exceptions import (
     BuildingInfoNotFoundError,
     BuildingInfoUpstreamError,
@@ -19,6 +23,7 @@ from .exceptions import (
 )
 from .geocoding import GeocodingService, get_geocoding_service
 from .llm_enricher import LlmBuildingInfoEnricher, get_llm_building_info_enricher
+from .open_street_map import OpenStreetMapService, get_building_data_service
 from .storage import ImageStorageService, get_image_storage_service
 
 logger = logging.getLogger(__name__)

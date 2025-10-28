@@ -1,12 +1,12 @@
 import httpx
 import pytest
 
+from citysnap.app.services.exceptions import OpenStreetMapServiceError
 from citysnap.app.services.open_street_map import (
-    OpenStreetMapService,
     _DEFAULT_BASE_URL,
     _DEFAULT_USER_AGENT,
+    OpenStreetMapService,
 )
-from citysnap.app.services.exceptions import OpenStreetMapServiceError
 
 
 class FakeResponse:
@@ -62,7 +62,8 @@ async def test_fetch_returns_building_info(monkeypatch):
                     "name": "Дом ГРЭС архитектора Полянского",
                     "start_date": "1939-11-01",
                     "architect": "  Андрей Полянский  ",
-                    "description": "Дом Полянского построен в стилистике постконструктивизма, со сдержанным декором, и большим вниманием к немногим деталям.",
+                    "description": "Дом Полянского построен в стилистике постконструктивизма, со сдержанным декором, "
+                                   "и большим вниманием к немногим деталям.",
                 },
             }
         ]
@@ -79,7 +80,8 @@ async def test_fetch_returns_building_info(monkeypatch):
     assert result.name == "Дом ГРЭС архитектора Полянского"
     assert result.year_built == 1939
     assert result.architect == "Андрей Полянский"
-    assert result.history == "Дом Полянского построен в стилистике постконструктивизма, со сдержанным декором, и большим вниманием к немногим деталям."
+    assert result.history == ("Дом Полянского построен в стилистике постконструктивизма, со сдержанным декором,"
+                              " и большим вниманием к немногим деталям.")
     assert fake_client.request_args["url"] == f"{_DEFAULT_BASE_URL}/way/111.json"
     assert fake_client.request_args["headers"] == {"User-Agent": _DEFAULT_USER_AGENT}
 

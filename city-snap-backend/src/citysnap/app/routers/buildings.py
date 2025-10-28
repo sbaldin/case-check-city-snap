@@ -7,7 +7,10 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..schemas import BuildingInfoRequest, BuildingInfoResponse
-from ..services.building_info import BuildingInfoOrchestrator, get_building_info_orchestrator
+from ..services.building_info import (
+    BuildingInfoOrchestrator,
+    get_building_info_orchestrator,
+)
 from ..services.exceptions import BuildingInfoOrchestratorError
 
 logger = logging.getLogger(__name__)

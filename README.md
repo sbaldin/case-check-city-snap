@@ -25,6 +25,8 @@ CitySnap — прототип сервиса «Гид-архитектор», к
   poetry run uvicorn citysnap.app.main:app --reload --port 8081
   ```
 - Вместо прямого вызова uvicorn можно воспользоваться скриптом: `poetry run api`.
+- Проверить код linter'ом: `poetry run ruff check`.
+- Отформатировать код: `poetry run ruff format`.
 
 ### Frontend (`city-snap-frontend`)
 - Требования: Node.js 18+ (npm входит в состав).
